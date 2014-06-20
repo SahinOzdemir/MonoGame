@@ -147,80 +147,71 @@ namespace Microsoft.Xna.Framework.GamerServices
             return BeginShowKeyboardInput(player, title, description, defaultText, callback, state, false );
         }
 
-        public static IAsyncResult BeginShowKeyboardInput (
-         PlayerIndex player,
-         string title,
-         string description,
-         string defaultText,
-         AsyncCallback callback,
-         Object state,
-         bool usePasswordMode)
-		{
-			ShowKeyboardInputDelegate ski = ShowKeyboardInput; 
-
-			return ski.BeginInvoke(player, title, description, defaultText, usePasswordMode, callback, ski);
-		}
-
-		public static string EndShowKeyboardInput (IAsyncResult result)
-		{
-			try 
-			{
-				ShowKeyboardInputDelegate ski = (ShowKeyboardInputDelegate)result.AsyncState; 
-
-				return ski.EndInvoke(result);
-			} 
-			finally 
-			{
-				isVisible = false;
-			}			
-		}
-
-		delegate Nullable<int> ShowMessageBoxDelegate( string title,
-         string text,
-         IEnumerable<string> buttons,
-         int focusButton,
-         MessageBoxIcon icon);
-
-		public static Nullable<int> ShowMessageBox( string title,
+        public static Nullable<int> ShowMessageBox( string title,
          string text,
          IEnumerable<string> buttons,
          int focusButton,
          MessageBoxIcon icon)
 		{
 			Nullable<int> result = null;
-			
-			if ( !isMessageBoxShowing )
-			{
-				isMessageBoxShowing = true;	
-	
-				/*UIAlertView alert = new UIAlertView();
-				alert.Title = title;
-				foreach( string btn in buttons )
-				{
-					alert.AddButton(btn);
-				}
-				alert.Message = text;
-				alert.Dismissed += delegate(object sender, UIButtonEventArgs e) 
-								{ 
-									result = e.ButtonIndex;
-									isMessageBoxShowing = false;
-								};
-				alert.Clicked += delegate(object sender, UIButtonEventArgs e) 
-								{ 
-									result = e.ButtonIndex; 
-									isMessageBoxShowing = false;
-								};
-				
-				GetInvokeOnMainThredObj().InvokeOnMainThread(delegate {    
-       		 		alert.Show();   
-    			});*/
-				
-			}
-			
-			isVisible = isMessageBoxShowing;
+            if (!isMessageBoxShowing)
+            {
+                isMessageBoxShowing = true;
+            }
 
-			return result;
-		}
+            isVisible = isMessageBoxShowing;
+
+            Game.Activity.RunOnUiThread(() => 
+                {
+                    var alert = new AlertDialog.Builder(Game.Activity);
+                    alert.SetTitle(title);
+                    alert.SetMessage(text);
+
+                    int i = 0;
+
+                    foreach (string btn in buttons)
+                    {
+                        switch (i)
+                        {
+                            case 0:
+                                alert.SetPositiveButton(btn, (s, ev) =>
+                                {
+                                    result = 0;
+                                    isVisible = false;
+                                });
+                                break;
+                            case 1:
+                                alert.SetNeutralButton(btn, (s, ev) =>
+                                {
+                                    result = 1;
+                                    isVisible = false;
+                                });
+                                break;
+                            case 2:
+                                alert.SetNegativeButton(btn, (s, ev) =>
+                                {
+                                    result = 2;
+                                    isVisible = false;
+                                });
+                                break;
+                            default:
+                                throw new ArgumentException("A maximum of 3 buttons can be added to the dialog");
+                                break;
+                        }
+
+                        i++;
+                    }
+                    
+                    alert.Show();
+                });
+
+            while (isVisible)
+            {
+                Thread.Sleep(1);
+            }
+
+            return result;
+        }
 
 		public static IAsyncResult BeginShowMessageBox(
          PlayerIndex player,
